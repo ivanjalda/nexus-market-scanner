@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus Terminal — Escáner de Mercado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#1a73e8; --blue-dark:#174ea6;
+    --green:#188038; --green-bg:#e6f4ea;
+    --red:#d93025; --red-bg:#fce8e6;
+    --yellow:#e37400; --yellow-bg:#fef7e0;
+    --bg:#ffffff; --surface:#f8f9fa; --border:#dadce0;
+    --text:#202124; --muted:#5f6368;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Roboto,Arial,sans-serif;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+  header h1{font-size:1.15rem;font-weight:500;margin:0;}
+  header h1 span{color:var(--blue);}
+  .updated{font-size:.78rem;color:var(--muted);}
+  .tabs{display:flex;gap:6px;padding:10px 22px 0;border-bottom:1px solid var(--border);}
+  .tab{padding:8px 14px;font-size:.85rem;border-radius:8px 8px 0 0;cursor:pointer;color:var(--muted);}
+  .tab.active{color:var(--blue);border-bottom:2px solid var(--blue);font-weight:500;}
+
+  .layout{display:grid;grid-template-columns:340px 1fr 300px;gap:0;height:calc(100vh - 104px);}
+  @media (max-width:1100px){.layout{grid-template-columns:1fr;height:auto;}}
+  .col{padding:16px;overflow-y:auto;}
+  .col.left{border-right:1px solid var(--border);}
+  .col.right{border-left:1px solid var(--border);}
+  h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;margin:16px 0 8px;}
+  h2:first-child{margin-top:0;}
+  input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit;}
+
+  .scan-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;margin-top:8px;cursor:pointer;}
+  .scan-row:hover{border-color:var(--blue);}
+  .scan-row .sym{font-weight:500;}
+  .scan-row .meta{font-size:.72rem;color:var(--muted);}
+  .tag{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .tag.long{background:var(--green-bg);color:var(--green);}
+  .tag.short{background:var(--red-bg);color:var(--red);}
+
+  .chart-wrap{padding:16px;display:flex;flex-direction:column;height:calc(100vh - 104px);}
+  .chart-title{font-size:.95rem;font-weight:500;margin-bottom:10px;}
+  .chart-title .sub{color:var(--muted);font-weight:400;font-size:.8rem;}
+  iframe{flex:1;border:1px solid var(--border);border-radius:8px;}
+
+  .metric-card{background:var(--surface);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+  .metric-row{display:flex;justify-content:space-between;font-size:.83rem;padding:5px 0;border-bottom:1px solid var(--border);}
+  .metric-row:last-child{border-bottom:none;}
+  .metric-row b{font-family:'Roboto Mono',monospace;}
+  .verdict{text-align:center;padding:16px;border-radius:10px;margin-bottom:12px;border:1px solid var(--border);}
+  .verdict .label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .verdict .action{font-size:1.3rem;font-weight:700;margin:4px 0;}
+  .verdict.long{background:var(--green-bg);} .verdict.long .action{color:var(--green);}
+  .verdict.short{background:var(--red-bg);} .verdict.short .action{color:var(--red);}
+  .verdict.wait{background:var(--yellow-bg);} .verdict.wait .action{color:var(--yellow);}
+  .note{font-size:.72rem;color:var(--muted);line-height:1.5;margin-top:10px;}
+  .empty{color:var(--muted);font-size:.85rem;text-align:center;padding:30px 10px;}
+  .disclaimer{background:var(--yellow-bg);border:1px solid #fde293;border-radius:8px;padding:10px 12px;font-size:.75rem;color:#7a5900;margin-bottom:14px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nexus <span>Terminal</span></h1>
+  <div class="updated" id="updatedAt">Cargando resultados…</div>
+</header>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-market="stocks">Acciones EEUU</div>
+  <div class="tab" data-market="crypto">Cripto</div>
+  <div class="tab" data-market="fx">Forex</div>
+</div>
+
+<div class="layout">
+  <div class="col left">
+    <input type="text" id="filterBox" placeholder="Filtrar por símbolo..." oninput="renderLists()">
+    <h2>Candidatos con sesgo alcista</h2>
+    <div id="longsBox"></div>
+    <h2>Candidatos con sesgo bajista</h2>
+    <div id="shortsBox"></div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title" id="chartTitle">Selecciona un activo de la lista</div>
+    <iframe id="tvChart" src="about:blank"></iframe>
+  </div>
+
+  <div class="col right">
+    <div class="disclaimer">Datos y análisis reales calculados en segundo plano sobre el mercado completo (Polygon.io). No es asesoramiento financiero ni garantía de resultado.</div>
+    <h2>Lectura técnica</h2>
+    <div id="analysisBox"><div class="empty">Elige un activo para ver su análisis</div></div>
+  </div>
+</div>
+
+<script>
+let data = { stocks: null, crypto: null, fx: null };
+let currentMarket = "stocks";
+let currentSymbol = null;
+
+async function loadResults(){
+  try{
+    const res = await fetch('/.netlify/functions/get-results');
+    data = await res.json();
+  }catch(e){
+    document.getElementById('updatedAt').textContent = "No se pudieron cargar los resultados.";
+    return;
+  }
+  const active = data[currentMarket];
+  document.getElementById('updatedAt').textContent = active
+    ? `Actualizado: ${new Date(active.updatedAt).toLocaleString('es-ES')} · ${active.totalEligible} activos líquidos analizados`
+    : "Aún sin datos suficientes — el escaneo en segundo plano todavía está acumulando histórico.";
+  renderLists();
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    currentMarket = t.dataset.market;
+    loadResults();
+  };
+});
+
+function renderLists(){
+  const q = document.getElementById('filterBox').value.toLowerCase().trim();
+  const active = data[currentMarket];
+  const longsBox = document.getElementById('longsBox'), shortsBox = document.getElementById('shortsBox');
+  longsBox.innerHTML = ''; shortsBox.innerHTML = '';
+  if(!active){ longsBox.innerHTML = '<div class="empty">Sin datos todavía</div>'; return; }
+
+  const longs = active.longs.filter(s=>!q || s.symbol.toLowerCase().includes(q));
+  const shorts = active.shorts.filter(s=>!q || s.symbol.toLowerCase().includes(q));
+
+  longsBox.innerHTML = longs.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
+  longs.forEach(s => longsBox.innerHTML += rowHtml(s,"long"));
+  shortsBox.innerHTML = shorts.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
+  shorts.forEach(s => shortsBox.innerHTML += rowHtml(s,"short"));
+
+  document.querySelectorAll('.scan-row').forEach(row=>{
+    row.onclick = () => selectSymbol(row.dataset.symbol);
+  });
+}
+
+function rowHtml(s, type){
+  return `<div class="scan-row" data-symbol="${s.symbol}">
+    <div><div class="sym">${s.symbol}</div><div class="meta">RSI ${s.rsi} · ${s.trend}</div></div>
+    <span class="tag ${type}">${type==="long"?"LONG":"SHORT"}</span>
+  </div>`;
+}
+
+function selectSymbol(symbol){
+  currentSymbol = symbol;
+  const active = data[currentMarket];
+  const s = [...active.longs, ...active.shorts].find(x=>x.symbol===symbol);
+  if(!s) return;
+  document.getElementById('chartTitle').innerHTML = `${symbol} <span class="sub">(${currentMarket})</span>`;
+  document.getElementById('tvChart').src = `https://s.tradingview.com/widgetembed/?frameElementId=tv_widget&symbol=${encodeURIComponent(symbol)}&interval=D&hidesidetoolbar=0&saveimage=1&toolbarbg=f8f9fa&theme=light&style=1&timezone=Etc%2FUTC`;
+  renderAnalysis(s);
+}
+
+function renderAnalysis(s){
+  const box = document.getElementById('analysisBox');
+  const vLabel = s.verdict==="long"?"Sesgo alcista":s.verdict==="short"?"Sesgo bajista":"Esperar";
+  box.innerHTML = `
+    <div class="verdict ${s.verdict}">
+      <div class="label">Lectura técnica — ${s.symbol}</div>
+      <div class="action">${vLabel}</div>
+      <div style="font-size:.78rem;color:var(--muted)">${s.why}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-row"><span>Precio</span><b>${s.price}</b></div>
+      <div class="metric-row"><span>SMA 20 / SMA 50</span><b>${s.sma20} / ${s.sma50 ?? '—'}</b></div>
+      <div class="metric-row"><span>Tendencia</span><b>${s.trend} (${s.trendStrength}%)</b></div>
+      <div class="metric-row"><span>RSI (14)</span><b>${s.rsi}</b></div>
+      <div class="metric-row"><span>Máx / Mín 20 sesiones</span><b>${s.high20} / ${s.low20}</b></div>
+      <div class="metric-row"><span>ATR (14) — volatilidad real</span><b>${s.atr} (${s.atrPct}%)</b></div>
+      <div class="metric-row"><span>Riesgo sugerido (1.5×ATR)</span><b>${s.stopSuggested}</b></div>
+      <div class="metric-row"><span>Horizonte orientativo</span><b>${s.horizon}</b></div>
+    </div>
+    <div class="note">El horizonte y el riesgo se derivan de la volatilidad histórica real (ATR) y la fuerza de la tendencia — son orientativos, no una promesa de tiempo o resultado.</div>
+  `;
+}
+
+loadResults();
+</script>
+</body>
+</html>
