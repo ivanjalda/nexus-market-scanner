@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 
 // ---- Configuración ----
 const POLYGON_KEY = process.env.POLYGON_API_KEY;
-const CALL_DELAY_MS = 13000;      // 5 llamadas/min en el plan gratuito de Polygon -> 12s + margen
+const CALL_DELAY_MS = 1200;      // 5 llamadas/min en el plan gratuito de Polygon -> 12s + margen
 const MAX_CALLS_PER_RUN = 65;     // ~14 min por ejecución, deja margen antes de cualquier corte de tiempo
 const HISTORY_LENGTH = 60;        // sesiones que guardamos por ticker
 const MIN_DOLLAR_VOLUME = 5_000_000; // filtro de liquidez para descartar basura/penny stocks
