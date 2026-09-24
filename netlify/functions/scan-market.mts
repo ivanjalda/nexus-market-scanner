@@ -141,6 +141,7 @@ export default async () => {
         await store.setJSON(cursorKey, cursor);
         await store.setJSON(seriesKey, series);
       } catch (e) {
+        console.error('FALLO en fetch:', market.key, dateStr, e.message);
         break;
       }
       cursorDate = addDays(cursorDate, 1);
