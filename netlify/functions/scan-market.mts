@@ -3,7 +3,7 @@ import { getStore } from "@netlify/blobs";
 // ---- Configuración ----
 const POLYGON_KEY = process.env.POLYGON_API_KEY;
 const CALL_DELAY_MS = 1200;      // 5 llamadas/min en el plan gratuito de Polygon -> 12s + margen
-const MAX_CALLS_PER_RUN = 65;     // ~14 min por ejecución, deja margen antes de cualquier corte de tiempo
+MAX_CALLS_PER_RUN = 5;     // ~14 min por ejecución, deja margen antes de cualquier corte de tiempo
 const HISTORY_LENGTH = 60;        // sesiones que guardamos por ticker
 const MIN_DOLLAR_VOLUME = 5_000_000; // filtro de liquidez para descartar basura/penny stocks
 const MIN_PRICE = 1;
@@ -117,7 +117,7 @@ export default async () => {
     let cursorKey = `cursor_${market.key}`;
     let cursor: string | null = (await store.get(cursorKey, { type: "json" })) || null;
 
-    let cursorDate = cursor ? addDays(new Date(cursor), 1) : addDays(new Date(), -95);
+    let cursorDate = cursor ? addDays(new Date(cursor), 1) : addDays(new Date(), -45);
     const today = new Date();
 
     while (calls < MAX_CALLS_PER_RUN && cursorDate < today) {
