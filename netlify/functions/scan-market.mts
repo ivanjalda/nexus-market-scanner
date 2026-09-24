@@ -1,11 +1,11 @@
-const { schedule } = require('@netlify/functions');
+import { schedule } from '@netlify/functions';
 
 const WATCHLIST = [
   'AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL', 'META',
   'BTC/USD', 'ETH/USD', 'EUR/USD', 'GBP/USD'
 ];
 
-exports.handler = schedule('0 21 * * 1-5', async () => {
+export const handler = schedule('0 21 * * 1-5', async () => {
   console.log('🚀 Iniciando escaneo del mercado real con Twelve Data...');
   
   const apiKey = process.env.TWELVE_DATA_API_KEY || process.env.POLYGON_API_KEY;
