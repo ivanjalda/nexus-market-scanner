@@ -103,7 +103,7 @@ let currentSymbol = null;
 
 async function loadResults(){
   try{
-    const res = await fetch('/./results.json');
+    const res = await fetch('./results.json');
     data = await res.json();
   }catch(e){
     document.getElementById('updatedAt').textContent = "No se pudieron cargar los resultados.";
