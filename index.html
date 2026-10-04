@@ -109,6 +109,7 @@ const NAME_MAP = {
 let data = { stocks: null, crypto: null, fx: null };
 let currentMarket = "stocks";
 let currentSymbol = null;
+let showAll = false;
 
 async function loadResults(){
   try{
@@ -134,8 +135,6 @@ document.querySelectorAll('.tab').forEach(t=>{
   };
 });
 
-function renderLists(){
-let showAll = false;
 document.getElementById('toggleAllBtn').onclick = () => {
   showAll = !showAll;
   document.getElementById('toggleAllBtn').textContent = showAll ? 'Ver solo con señal' : 'Ver todos los activos';
@@ -172,7 +171,7 @@ function renderLists(){
   document.querySelectorAll('.scan-row').forEach(row=>{
     row.onclick = () => selectSymbol(row.dataset.symbol);
   });
-  }
+}
 
 function rowHtml(s, type){
   return `<div class="scan-row" data-symbol="${s.symbol}">
@@ -180,15 +179,17 @@ function rowHtml(s, type){
     <span class="tag ${type}">${type==="long"?"LONG":type==="short"?"SHORT":"ESPERAR"}</span>
   </div>`;
 }
+
 function tvSymbol(symbol, market){
   if(market==="fx") return "FX:" + symbol.replace("C:","");
   if(market==="crypto") return "COINBASE:" + symbol.replace("X:","");
   return symbol;
 }
+
 function selectSymbol(symbol){
   currentSymbol = symbol;
   const active = data[currentMarket];
-  const s = [...active.longs, ...active.shorts].find(x=>x.symbol===symbol);
+  const s = [...active.longs, ...active.shorts, ...(active.all||[])].find(x=>x.symbol===symbol);
   if(!s) return;
   document.getElementById('chartTitle').innerHTML = `${symbol} <span class="sub">(${currentMarket})</span>`;
   document.getElementById('tvChart').src = `https://s.tradingview.com/widgetembed/?frameElementId=tv_widget&symbol=${encodeURIComponent(tvSymbol(symbol, currentMarket))}&interval=D&hidesidetoolbar=0&saveimage=1&toolbarbg=f8f9fa&theme=light&style=1&timezone=Etc%2FUTC`;
