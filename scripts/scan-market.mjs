@@ -146,6 +146,7 @@ async function run(){
       historyDays: Math.max(0, ...Object.values(series).map(s=>s.c.length)),
       totalEligible: scored.length,
       totalTracked: Object.keys(series).length,
+      all: scored.slice().sort((a,b)=>a.symbol.localeCompare(b.symbol)),
       longs, shorts
     };
     console.log(`[${market.key}] histórico máximo: ${results[market.key].historyDays} sesiones, elegibles: ${scored.length}`);
