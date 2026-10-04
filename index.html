@@ -170,7 +170,7 @@ function selectSymbol(symbol){
   const s = [...active.longs, ...active.shorts].find(x=>x.symbol===symbol);
   if(!s) return;
   document.getElementById('chartTitle').innerHTML = `${symbol} <span class="sub">(${currentMarket})</span>`;
-  document.getElementById('tvChart').src = `https://s.tradingview.com/widgetembed/?frameElementId=tv_widget&symbol=${encodeURIComponent(symbol)}&interval=D&hidesidetoolbar=0&saveimage=1&toolbarbg=f8f9fa&theme=light&style=1&timezone=Etc%2FUTC`;
+  document.getElementById('tvChart').src = `https://s.tradingview.com/widgetembed/?frameElementId=tv_widget&symbol=${encodeURIComponent(tvSymbol(symbol, currentMarket))}&interval=D&hidesidetoolbar=0&saveimage=1&toolbarbg=f8f9fa&theme=light&style=1&timezone=Etc%2FUTC`;
   renderAnalysis(s);
 }
 
