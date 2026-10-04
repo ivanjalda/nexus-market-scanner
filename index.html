@@ -159,7 +159,11 @@ function rowHtml(s, type){
     <span class="tag ${type}">${type==="long"?"LONG":"SHORT"}</span>
   </div>`;
 }
-
+function tvSymbol(symbol, market){
+  if(market==="fx") return "FX:" + symbol.replace("C:","");
+  if(market==="crypto") return "COINBASE:" + symbol.replace("X:","");
+  return symbol;
+}
 function selectSymbol(symbol){
   currentSymbol = symbol;
   const active = data[currentMarket];
