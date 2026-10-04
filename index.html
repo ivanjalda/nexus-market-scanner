@@ -97,6 +97,13 @@
 </div>
 
 <script>
+const NAME_MAP = {
+  "nike":"NKE","apple":"AAPL","microsoft":"MSFT","google":"GOOGL","alphabet":"GOOGL",
+  "amazon":"AMZN","nvidia":"NVDA","tesla":"TSLA","meta":"META","facebook":"META",
+  "netflix":"NFLX","disney":"DIS","coca cola":"KO","coca-cola":"KO","mcdonalds":"MCD",
+  "mcdonald's":"MCD","bitcoin":"X:BTCUSD","ethereum":"X:ETHUSD","oro":"C:XAUUSD",
+  "gold":"C:XAUUSD","euro":"C:EURUSD"
+};
 let data = { stocks: null, crypto: null, fx: null };
 let currentMarket = "stocks";
 let currentSymbol = null;
@@ -127,6 +134,7 @@ document.querySelectorAll('.tab').forEach(t=>{
 
 function renderLists(){
   const q = document.getElementById('filterBox').value.toLowerCase().trim();
+  const qTicker = NAME_MAP[q] || q;
   const active = data[currentMarket];
   const longsBox = document.getElementById('longsBox'), shortsBox = document.getElementById('shortsBox');
   longsBox.innerHTML = ''; shortsBox.innerHTML = '';
