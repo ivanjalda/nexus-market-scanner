@@ -41,6 +41,7 @@
   .tag{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;}
   .tag.long{background:var(--green-bg);color:var(--green);}
   .tag.short{background:var(--red-bg);color:var(--red);}
+  .tag.wait{background:var(--yellow-bg);color:var(--yellow);}
 
   .chart-wrap{padding:16px;display:flex;flex-direction:column;height:calc(100vh - 104px);}
   .chart-title{font-size:.95rem;font-weight:500;margin-bottom:10px;}
@@ -78,10 +79,11 @@
 <div class="layout">
   <div class="col left">
     <input type="text" id="filterBox" placeholder="Filtrar por símbolo..." oninput="renderLists()">
-    <h2>Candidatos con sesgo alcista</h2>
+    <button id="toggleAllBtn" style="margin-top:8px;width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:.8rem;">Ver todos los activos</button>
+    <h2 id="longsTitle">Candidatos con sesgo alcista</h2>
     <div id="longsBox"></div>
-    <h2>Candidatos con sesgo bajista</h2>
-    <div id="shortsBox"></div>
+  <h2 id="shortsTitle">Candidatos con sesgo bajista</h2>
+  <div id="shortsBox"></div>
   </div>
 
   <div class="chart-wrap">
@@ -133,12 +135,44 @@ document.querySelectorAll('.tab').forEach(t=>{
 });
 
 function renderLists(){
+let showAll = false;
+document.getElementById('toggleAllBtn').onclick = () => {
+  showAll = !showAll;
+  document.getElementById('toggleAllBtn').textContent = showAll ? 'Ver solo con señal' : 'Ver todos los activos';
+  renderLists();
+};
+
+function renderLists(){
   const q = document.getElementById('filterBox').value.toLowerCase().trim();
   const qTicker = NAME_MAP[q] || q;
   const active = data[currentMarket];
   const longsBox = document.getElementById('longsBox'), shortsBox = document.getElementById('shortsBox');
   longsBox.innerHTML = ''; shortsBox.innerHTML = '';
   if(!active){ longsBox.innerHTML = '<div class="empty">Sin datos todavía</div>'; return; }
+
+  if(showAll){
+    document.getElementById('longsTitle').textContent = 'Todos los activos analizados';
+    document.getElementById('shortsTitle').style.display = 'none';
+    shortsBox.style.display = 'none';
+    const all = (active.all || []).filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
+    longsBox.innerHTML = all.length ? '' : '<div class="empty">Sin resultados para ese filtro</div>';
+    all.forEach(s => longsBox.innerHTML += rowHtml(s, s.verdict));
+  } else {
+    document.getElementById('longsTitle').textContent = 'Candidatos con sesgo alcista';
+    document.getElementById('shortsTitle').style.display = '';
+    shortsBox.style.display = '';
+    const longs = active.longs.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
+    const shorts = active.shorts.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
+    longsBox.innerHTML = longs.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
+    longs.forEach(s => longsBox.innerHTML += rowHtml(s,"long"));
+    shortsBox.innerHTML = shorts.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
+    shorts.forEach(s => shortsBox.innerHTML += rowHtml(s,"short"));
+  }
+
+  document.querySelectorAll('.scan-row').forEach(row=>{
+    row.onclick = () => selectSymbol(row.dataset.symbol);
+  });
+}}
 
   const longs = active.longs.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
   const shorts = active.shorts.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
@@ -156,7 +190,7 @@ function renderLists(){
 function rowHtml(s, type){
   return `<div class="scan-row" data-symbol="${s.symbol}">
     <div><div class="sym">${s.symbol}</div><div class="meta">RSI ${s.rsi} · ${s.trend}</div></div>
-    <span class="tag ${type}">${type==="long"?"LONG":"SHORT"}</span>
+    <span class="tag ${type}">${type==="long"?"LONG":type==="short"?"SHORT":"ESPERAR"}</span>
   </div>`;
 }
 function tvSymbol(symbol, market){
