@@ -140,8 +140,8 @@ function renderLists(){
   longsBox.innerHTML = ''; shortsBox.innerHTML = '';
   if(!active){ longsBox.innerHTML = '<div class="empty">Sin datos todavía</div>'; return; }
 
-  const longs = active.longs.filter(s=>!q || s.symbol.toLowerCase().includes(q));
-  const shorts = active.shorts.filter(s=>!q || s.symbol.toLowerCase().includes(q));
+  const longs = active.longs.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
+  const shorts = active.shorts.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
 
   longsBox.innerHTML = longs.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
   longs.forEach(s => longsBox.innerHTML += rowHtml(s,"long"));
