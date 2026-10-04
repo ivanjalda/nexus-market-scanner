@@ -172,20 +172,7 @@ function renderLists(){
   document.querySelectorAll('.scan-row').forEach(row=>{
     row.onclick = () => selectSymbol(row.dataset.symbol);
   });
-}}
-
-  const longs = active.longs.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
-  const shorts = active.shorts.filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
-
-  longsBox.innerHTML = longs.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
-  longs.forEach(s => longsBox.innerHTML += rowHtml(s,"long"));
-  shortsBox.innerHTML = shorts.length ? '' : '<div class="empty">Ninguno ahora mismo</div>';
-  shorts.forEach(s => shortsBox.innerHTML += rowHtml(s,"short"));
-
-  document.querySelectorAll('.scan-row').forEach(row=>{
-    row.onclick = () => selectSymbol(row.dataset.symbol);
-  });
-}
+  }
 
 function rowHtml(s, type){
   return `<div class="scan-row" data-symbol="${s.symbol}">
