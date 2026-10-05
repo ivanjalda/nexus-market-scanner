@@ -154,8 +154,7 @@ function renderLists(){
     document.getElementById('shortsTitle').style.display = 'none';
     shortsBox.style.display = 'none';
     const all = (active.all || []).filter(s=>!q || s.symbol.toLowerCase().includes(qTicker));
-    longsBox.innerHTML = all.length ? '' : '<div class="empty">Sin resultados para ese filtro</div>';
-    all.forEach(s => longsBox.innerHTML += rowHtml(s, s.verdict));
+    longsBox.innerHTML = all.length ? all.map(s => rowHtml(s, s.verdict)).join('') : '<div class="empty">Sin resultados para ese filtro</div>';
   } else {
     document.getElementById('longsTitle').textContent = 'Candidatos con sesgo alcista';
     document.getElementById('shortsTitle').style.display = '';
