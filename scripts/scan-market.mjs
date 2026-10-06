@@ -181,12 +181,15 @@ async function run(){
     const newShorts = shorts.filter(s=>!prevSymbols.has(s.symbol));
 
     if(newLongs.length || newShorts.length){
-      let block = `*${market.label}*\n`;
-      newLongs.forEach(s => block += `🟢 LONG ${s.symbol} — RSI ${s.rsi}, ${s.trend}\n`);
-      newShorts.forEach(s => block += `🔴 SHORT ${s.symbol} — RSI ${s.rsi}, ${s.trend}\n`);
+      const MAX_PER_DIRECTION = 15;
+      let block = `${market.label}\n`;
+      newLongs.slice(0, MAX_PER_DIRECTION).forEach(s => block += `🟢 LONG ${s.symbol} — fuerza ${s.trendStrength}%, RSI ${s.rsi}\n`);
+      if(newLongs.length > MAX_PER_DIRECTION) block += `…y ${newLongs.length - MAX_PER_DIRECTION} alcistas más (ver web)\n`;
+      newShorts.slice(0, MAX_PER_DIRECTION).forEach(s => block += `🔴 SHORT ${s.symbol} — fuerza ${s.trendStrength}%, RSI ${s.rsi}\n`);
+      if(newShorts.length > MAX_PER_DIRECTION) block += `…y ${newShorts.length - MAX_PER_DIRECTION} bajistas más (ver web)\n`;
       alertBlocks.push(block);
     }
-
+    
     results[market.key] = {
       updatedAt: new Date().toISOString(),
       historyDays: Math.max(0, ...Object.values(series).map(s=>s.c.length)),
