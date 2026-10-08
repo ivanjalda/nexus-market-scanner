@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus Terminal — Histórico de señales</title>
+<style>
+:root{
+  --blue:#0071e3;
+  --green:#1d7a3c; --green-bg:#e8f8ee;
+  --red:#d5392f; --red-bg:#fdeceb;
+  --yellow:#b36a00; --yellow-bg:#fdf3e3;
+  --bg:#ffffff; --surface:#f5f5f7; --border:#e5e5ea;
+  --text:#1d1d1f; --muted:#86868b;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+header{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);}
+header .brand{font-size:1.3rem;font-weight:600;letter-spacing:-0.02em;}
+header .brand span{color:var(--blue);}
+header a{font-size:.9rem;color:var(--blue);text-decoration:none;font-weight:500;}
+main{max-width:980px;margin:0 auto;padding:40px 24px 80px;}
+h1.title{font-size:2rem;font-weight:700;letter-spacing:-0.03em;margin:0 0 12px;}
+.lead{color:var(--muted);font-size:1rem;line-height:1.6;max-width:680px;margin:0 0 28px;}
+h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:36px 0 12px;}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.pill{padding:8px 16px;border-radius:20px;background:var(--surface);border:none;font-size:.85rem;cursor:pointer;font-family:inherit;color:var(--text);}
+.pill.active{background:var(--text);color:#fff;}
+.warn{background:var(--yellow-bg);color:var(--yellow);border-radius:14px;padding:14px 18px;font-size:.88rem;line-height:1.5;margin-bottom:20px;}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
+.card{background:var(--surface);border-radius:18px;padding:20px;}
+.card .num{font-size:1.9rem;font-weight:700;letter-spacing:-0.02em;}
+.card .lbl{font-size:.78rem;color:var(--muted);margin-top:6px;line-height:1.4;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.88rem;}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;border-bottom:1px solid var(--border);}
+td{padding:12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.pos{color:var(--green);font-weight:600;}
+.neg{color:var(--red);font-weight:600;}
+.muted{color:var(--muted);}
+.tag{font-size:.68rem;font-weight:700;padding:4px 11px;border-radius:20px;letter-spacing:.02em;}
+.tag.long{background:var(--green-bg);color:var(--green);}
+.tag.short{background:var(--red-bg);color:var(--red);}
+.empty{color:var(--muted);text-align:center;padding:36px 12px;white-space:normal;}
+.method{background:var(--surface);border-radius:18px;padding:24px 28px;font-size:.92rem;line-height:1.7;}
+.method ul{margin:10px 0 0;padding-left:20px;}
+.method li{margin-bottom:6px;}
+.method a{color:var(--blue);}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Nexus <span>Terminal</span></div>
+  <a href="./">← Volver al escáner</a>
+</header>
+<main>
+  <h1 class="title">Histórico de señales</h1>
+  <p class="lead">Aquí registramos cada señal que genera el sistema y qué pasó después con el precio, aciertos y fallos incluidos. Nada se borra ni se retoca.</p>
+
+  <div class="filters">
+    <button class="pill active" data-f="all">Todos</button>
+    <button class="pill" data-f="stocks">Acciones EEUU</button>
+    <button class="pill" data-f="crypto">Cripto</button>
+    <button class="pill" data-f="fx">Forex</button>
+  </div>
+
+  <div id="warn"></div>
+  <div class="cards" id="cards"></div>
+
+  <h2>Últimas señales</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Fecha señal</th><th>Mercado</th><th>Activo</th><th>Dirección</th><th>Fuerza</th><th>Entrada</th><th>Resultado a 5 sesiones</th></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <h2>Cómo se mide</h2>
+  <div class="method">
+    <ul>
+      <li><b>Qué es una señal:</b> un activo que entra en la lista alcista o bajista cuando antes no estaba en ninguna.</li>
+      <li><b>Entrada:</b> cierre de la sesión siguiente a la señal, que es cuando realmente se podría actuar.</li>
+      <li><b>Salida:</b> cierre 5 sesiones después de la entrada. Siempre 5, fijado de antemano.</li>
+      <li><b>Resultado:</b> variación en %. En las señales bajistas se invierte el signo (ganas si el precio baja).</li>
+      <li><b>Seguimiento hacia delante:</b> solo se registran señales desde que empezó el sistema, no se calcula con datos pasados.</li>
+    </ul>
+    <p><b>Lo que este histórico NO incluye:</b> comisiones ni diferencias de precio al operar, y todavía no compara contra el mercado en general (si todo el mercado sube, las señales alcistas saldrán bien sin mérito propio). Con pocas señales cerradas los porcentajes no significan nada. La rentabilidad pasada no garantiza resultados futuros y esto no es asesoramiento financiero.</p>
+    <p>El registro se guarda en un repositorio público de GitHub, con su historial de cambios: <a href="https://github.com/ivanjalda/nexus-market-scanner/commits/main/data/signals.json" target="_blank" rel="noopener">verlo en GitHub</a>.</p>
+  </div>
+</main>
+
+<script>
+const LABELS = { stocks:"Acciones EEUU", crypto:"Cripto", fx:"Forex" };
+let signals = [];
+let filter = "all";
+
+function fmtPct(n){
+  if(n === null || n === undefined) return "—";
+  return (n > 0 ? "+" : "") + n.toFixed(2) + "%";
+}
+function cls(n){ return n > 0 ? "pos" : n < 0 ? "neg" : ""; }
+function median(arr){
+  if(!arr.length) return null;
+  const a = [...arr].sort((x,y)=>x-y);
+  const m = Math.floor(a.length/2);
+  return a.length % 2 ? a[m] : (a[m-1] + a[m]) / 2;
+}
+
+async function load(){
+  try{
+    const res = await fetch('./data/signals.json?v=' + Date.now());
+    if(!res.ok) throw new Error('sin archivo');
+    signals = await res.json();
+  }catch(e){ signals = []; }
+  render();
+}
+
+function render(){
+  const list = signals.filter(s => filter === "all" || s.market === filter);
+  const closed = list.filter(s => s.status === "closed");
+  const open = list.filter(s => s.status !== "closed" && s.status !== "unverified");
+  const returns = closed.map(s => s.returnPct);
+  const wins = closed.filter(s => s.returnPct > 0).length;
+  const hit = closed.length ? (wins / closed.length * 100) : null;
+  const avg = closed.length ? returns.reduce((a,b)=>a+b,0) / closed.length : null;
+  const med = median(returns);
+  const since = signals.length ? signals.map(s => s.signalDate).sort()[0] : null;
+
+  document.getElementById('warn').innerHTML = closed.length < 30
+    ? `<div class="warn">Muestra pequeña: ${closed.length} señales cerradas. Con menos de 30 los porcentajes no son fiables; irán siendo más significativos con el tiempo.${since ? " Registro iniciado el " + since + "." : ""}</div>`
+    : "";
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card"><div class="num">${list.length}</div><div class="lbl">señales registradas<br>${closed.length} cerradas · ${open.length} en curso</div></div>
+    <div class="card"><div class="num">${hit === null ? "—" : hit.toFixed(0) + "%"}</div><div class="lbl">con resultado positivo a 5 sesiones</div></div>
+    <div class="card"><div class="num ${cls(avg)}">${fmtPct(avg)}</div><div class="lbl">resultado medio</div></div>
+    <div class="card"><div class="num ${cls(med)}">${fmtPct(med)}</div><div class="lbl">resultado mediano (menos sensible a casos extremos)</div></div>
+  `;
+
+  const rows = [...list]
+    .sort((a,b) => b.signalDate.localeCompare(a.signalDate) || a.symbol.localeCompare(b.symbol))
+    .slice(0,150);
+
+  document.getElementById('tbody').innerHTML = rows.length ? rows.map(s => {
+    let res;
+    if(s.status === "closed") res = `<span class="${cls(s.returnPct)}">${fmtPct(s.returnPct)}</span>`;
+    else if(s.status === "unverified") res = `<span class="muted">sin datos</span>`;
+    else if(s.currentReturnPct !== null && s.currentReturnPct !== undefined) res = `<span class="muted">en curso (${fmtPct(s.currentReturnPct)})</span>`;
+    else res = `<span class="muted">pendiente de entrada</span>`;
+    const entry = (s.entryPrice === null || s.entryPrice === undefined) ? "—" : s.entryPrice;
+    return `<tr>
+      <td>${s.signalDate}</td>
+      <td>${LABELS[s.market] || s.market}</td>
+      <td><b>${s.symbol}</b></td>
+      <td><span class="tag ${s.verdict}">${s.verdict === "long" ? "LONG" : "SHORT"}</span></td>
+      <td>${s.trendStrength}%</td>
+      <td>${entry}</td>
+      <td>${res}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" class="empty">Todavía no hay señales registradas. Aparecerán aquí a medida que el sistema detecte señales nuevas.</td></tr>`;
+}
+
+document.querySelectorAll('.pill').forEach(p => {
+  p.onclick = () => {
+    document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    filter = p.dataset.f;
+    render();
+  };
+});
+
+load();
+</script>
+</body>
+</html>
