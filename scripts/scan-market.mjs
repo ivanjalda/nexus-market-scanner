@@ -4,11 +4,12 @@ const POLYGON_KEY = process.env.POLYGON_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;
 
-const CALL_DELAY_MS = 1200;
-const MAX_CALLS_PER_RUN = 5;
+const CALL_DELAY_MS = 12500;
+const MAX_CALLS_PER_RUN = 30;
 const HISTORY_LENGTH = 60;
 const MIN_DOLLAR_VOLUME = 5_000_000;
 const MIN_PRICE = 1;
+const EVAL_HORIZON = 5;
 
 const MARKETS = [
   { key: "stocks", path: "us/market/stocks", label: "Acciones EEUU" },
@@ -113,11 +114,42 @@ function analyzeTicker(closes,highs,lows,volumes){
   };
 }
 
+function evaluateSignals(signals, seriesByMarket){
+  for(const sig of signals){
+    if(sig.status === "closed") continue;
+    const marketSeries = seriesByMarket[sig.market];
+    const s = marketSeries ? marketSeries[sig.symbol] : null;
+    if(!s) continue;
+    const i0 = s.dates.indexOf(sig.signalDate);
+    if(i0 === -1){ sig.status = "unverified"; continue; }
+    const iEntry = i0 + 1;
+    if(iEntry >= s.c.length) continue;
+    if(sig.entryPrice === null){
+      sig.entryPrice = s.c[iEntry];
+      sig.entryDate = s.dates[iEntry];
+    }
+    const iExit = iEntry + EVAL_HORIZON;
+    const dir = sig.verdict === "long" ? 1 : -1;
+    if(iExit < s.c.length){
+      sig.exitPrice = s.c[iExit];
+      sig.exitDate = s.dates[iExit];
+      sig.returnPct = round(dir * (s.c[iExit] / sig.entryPrice - 1) * 100);
+      sig.currentReturnPct = null;
+      sig.status = "closed";
+    } else {
+      sig.currentReturnPct = round(dir * (s.c[s.c.length - 1] / sig.entryPrice - 1) * 100);
+    }
+  }
+}
+
 async function run(){
   if(!POLYGON_KEY){ console.error("Falta POLYGON_API_KEY"); process.exit(1); }
   await mkdir(DATA_DIR, {recursive:true});
 
   const previousResults = await loadJSON("results.json", {});
+  const signals = await loadJSON(`${DATA_DIR}/signals.json`, []);
+  const knownIds = new Set(signals.map(s=>s.id));
+  const seriesByMarket = {};
   let totalCalls=0;
   const results={};
   const alertBlocks = [];
@@ -129,9 +161,9 @@ async function run(){
     let cursor = stateObj.cursor;
 
     let cursorDate = cursor ? addDays(new Date(cursor),1) : addDays(new Date(), -95);
-    const today = new Date();
+    const todayStr = toISODate(new Date());
 
-    while(totalCalls<MAX_CALLS_PER_RUN && cursorDate<today){
+    while(totalCalls<MAX_CALLS_PER_RUN && toISODate(cursorDate)<todayStr){
       const dateStr=toISODate(cursorDate);
       try{
         const res = await fetchGroupedDaily(market.path, dateStr);
@@ -153,10 +185,11 @@ async function run(){
         break;
       }
       cursorDate=addDays(cursorDate,1);
-      if(totalCalls<MAX_CALLS_PER_RUN && cursorDate<today) await sleep(CALL_DELAY_MS);
+      if(totalCalls<MAX_CALLS_PER_RUN && toISODate(cursorDate)<todayStr) await sleep(CALL_DELAY_MS);
     }
 
     await saveJSON(seriesPath, {cursor, series});
+    seriesByMarket[market.key] = series;
 
     const scored=[];
     for(const [sym,s] of Object.entries(series)){
@@ -180,6 +213,20 @@ async function run(){
     const newLongs = longs.filter(s=>!prevSymbols.has(s.symbol));
     const newShorts = shorts.filter(s=>!prevSymbols.has(s.symbol));
 
+    for(const s of [...newLongs, ...newShorts]){
+      const ser = series[s.symbol];
+      const signalDate = ser.dates[ser.dates.length-1];
+      const id = `${market.key}|${s.symbol}|${s.verdict}|${signalDate}`;
+      if(knownIds.has(id)) continue;
+      knownIds.add(id);
+      signals.push({
+        id, market: market.key, symbol: s.symbol, verdict: s.verdict, signalDate,
+        trendStrength: s.trendStrength, rsi: s.rsi, status: "open",
+        entryDate: null, entryPrice: null, exitDate: null, exitPrice: null,
+        returnPct: null, currentReturnPct: null
+      });
+    }
+
     if(newLongs.length || newShorts.length){
       const MAX_PER_DIRECTION = 15;
       let block = `${market.label}\n`;
@@ -189,7 +236,7 @@ async function run(){
       if(newShorts.length > MAX_PER_DIRECTION) block += `…y ${newShorts.length - MAX_PER_DIRECTION} bajistas más (ver web)\n`;
       alertBlocks.push(block);
     }
-    
+
     results[market.key] = {
       updatedAt: new Date().toISOString(),
       historyDays: Math.max(0, ...Object.values(series).map(s=>s.c.length)),
@@ -201,17 +248,20 @@ async function run(){
     console.log(`[${market.key}] histórico máximo: ${results[market.key].historyDays} sesiones, elegibles: ${scored.length}`);
   }
 
+  evaluateSignals(signals, seriesByMarket);
+  await saveJSON(`${DATA_DIR}/signals.json`, signals);
   await saveJSON("results.json", results);
 
   if(alertBlocks.length){
-    const message = `📊 Nexus Terminal — nuevas señales\n\n${alertBlocks.join('\n')}`;
-    await sendTelegram(message);
-    console.log("Alerta de Telegram enviada.");
+    for(const block of alertBlocks){
+      await sendTelegram(`📊 Nexus Terminal — nuevas señales\n\n${block}`);
+    }
+    console.log(`Alertas de Telegram enviadas: ${alertBlocks.length}`);
   } else {
     console.log("Sin señales nuevas, no se envía alerta.");
   }
 
-  console.log(`Listo. Llamadas usadas: ${totalCalls}`);
+  console.log(`Listo. Llamadas usadas: ${totalCalls}. Señales registradas: ${signals.length}`);
 }
 
 run().catch(e=>{ console.error(e); process.exit(1); });
